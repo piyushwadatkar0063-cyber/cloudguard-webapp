@@ -1,19 +1,25 @@
 
+import pytest
 from fastapi.testclient import TestClient
 
 from main import app
 
-client = TestClient(app)
+
+@pytest.fixture(scope="module")
+def client():
+    # Entering the context manager runs FastAPI's startup lifespan.
+    with TestClient(app) as test_client:
+        yield test_client
 
 
-def test_root_endpoint():
+def test_root_endpoint(client):
     response = client.get("/")
 
     assert response.status_code == 200
     assert response.json()["project"] == "CloudGuard"
 
 
-def test_health_endpoint():
+def test_health_endpoint(client):
     response = client.get("/health")
 
     assert response.status_code == 200
@@ -21,7 +27,7 @@ def test_health_endpoint():
     assert response.json()["database"] == "connected"
 
 
-def test_create_deployment():
+def test_create_deployment(client):
     response = client.post(
         "/deployments",
         json={
@@ -40,14 +46,14 @@ def test_create_deployment():
     assert "id" in data
 
 
-def test_list_deployments():
+def test_list_deployments(client):
     response = client.get("/deployments")
 
     assert response.status_code == 200
     assert isinstance(response.json(), list)
 
 
-def test_filter_deployments_by_status():
+def test_filter_deployments_by_status(client):
     response = client.get("/deployments?status=success")
 
     assert response.status_code == 200
@@ -57,21 +63,21 @@ def test_filter_deployments_by_status():
     )
 
 
-def test_deployment_pagination():
+def test_deployment_pagination(client):
     response = client.get("/deployments?limit=1&offset=0")
 
     assert response.status_code == 200
     assert len(response.json()) <= 1
 
 
-def test_deployment_not_found():
+def test_deployment_not_found(client):
     response = client.get("/deployments/999999999")
 
     assert response.status_code == 404
     assert response.json()["detail"] == "Deployment not found"
 
 
-def test_invalid_deployment_status():
+def test_invalid_deployment_status(client):
     response = client.post(
         "/deployments",
         json={
