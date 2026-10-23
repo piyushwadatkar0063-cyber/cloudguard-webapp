@@ -63,3 +63,14 @@ jobs:
 
       - name: Build CloudGuard API image
         run: docker build -t cloudguard-api:${{ github.sha }} ./Backend
+
+        
+      - name: Scan Docker image for vulnerabilities
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: cloudguard-api:${{ github.sha }}
+          format: table
+          exit-code: "1"
+          ignore-unfixed: true
+          vuln-type: os,library
+          severity: CRITICAL,HIGH
